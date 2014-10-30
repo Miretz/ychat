@@ -33,7 +33,7 @@ io.on('connection', function (socket) {
         io.emit('typing', authorStr + " is typing...");
     });
 
-    var address = socket.handshake.address;
+    var address = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address.address;
     var newUserMessage = {author: "Admin-Bot", message: "A user has connected: " + address, time: new Date().getTime()};
     messages.push(newUserMessage);
     io.emit('chat message', newUserMessage);
