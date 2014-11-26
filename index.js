@@ -8,6 +8,7 @@ app.use("/static", express.static(__dirname + '/static'));
 
 //holds all the messages in memory
 var messages = []
+var loggedIn = []
 
 //check if array contains
 function include(arr,obj) {
@@ -19,8 +20,26 @@ function replaceBadHtml(inputText){
     return inputText.toString().replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+//function send admin message
+function adminMessage(action, username, socket){
+    var adminMessage = {
+        author: "Admin-Bot", 
+        message: action + ": " + escapedUsername, 
+        time: new Date().getTime()
+    };
+    messages.push(adminMessage);
+    io.emit('chat message', adminMessage);
+}
+
+//get user ip address
+function getUserIp(socket){
+    return socket.handshake.headers['x-forwarded-for'] || socket.handshake.address.address;
+}
+
+//io functions
 io.on('connection', function (socket) {
 
+    //messages
 	socket.on('chat message', function (msg) {
         msg.time = new Date().getTime();
         msg.author = replaceBadHtml(msg.author);
@@ -29,14 +48,46 @@ io.on('connection', function (socket) {
 		io.emit('chat message', msg);
 	});
 
+    //typing notification
     socket.on('typing', function (authorStr) {
         io.emit('typing', authorStr + " is typing...");
     });
 
-    var address = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address.address;
-    var newUserMessage = {author: "Admin-Bot", message: "A user has connected: " + address, time: new Date().getTime()};
-    messages.push(newUserMessage);
-    io.emit('chat message', newUserMessage);
+
+
+
+
+    //login notification
+    socket.on('login', function (username) {
+        escapedUsername = replaceBadHtml(username);
+        var address = getUserIp(socket);
+        var user = {
+            username: escapedUsername,
+            ip: address
+        };
+        loggedIn.push(user);
+        adminMessage("User connected",escapedUsername, socket);
+        console.info(loggedIn);
+    });
+
+    //logout notification
+    socket.on('disconnect', function(){
+        var address = getUserIp(socket);
+    
+        for(var i = 0; i < loggedIn.length; i++) {
+            if(loggedIn[i].ip==address){
+                adminMessage("User disconnected",loggedIn[i].username, socket);
+           
+                //remove user from user array
+                loggedIn.splice(i, 1);
+
+                console.info(loggedIn);
+
+                break; 
+            }
+        }
+    });
+
 });
 
 app.get('/', function (req, res) {
