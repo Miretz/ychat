@@ -14,13 +14,13 @@ $(document).ready(function () {
     while(!isLoggedIn){
         var person = prompt("Please enter your name", "Noob");
         if (person != null) {
+            socket = io();   
+            socket.emit('login', person);
             $("#u").val(person);
             $.notify(person + " you are now connected.", "success");
             isLoggedIn = true;
         }
     } 
-
-    var socket = io();
 
     $('#m').keypress(function( event ) {
         var authorStr = $('#u').val();
